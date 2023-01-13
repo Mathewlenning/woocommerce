@@ -39,7 +39,7 @@ export const useCreateProductByType = () => {
 				`woocommerce_product_creation_experience_${ year }${ month }_v1`
 			);
 
-			if ( assignment.variationName === 'treatment' ) {
+			if ( assignment.variationName === 'treatment' || true ) {
 				await updateOptions( {
 					[ NEW_PRODUCT_MANAGEMENT ]: 'yes',
 				} );
