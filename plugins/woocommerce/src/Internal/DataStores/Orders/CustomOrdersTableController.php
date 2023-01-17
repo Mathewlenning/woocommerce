@@ -171,7 +171,11 @@ class CustomOrdersTableController {
 		$class_and_method = ( new \ReflectionClass( $this ) )->getShortName() . '::' . __FUNCTION__;
 		wc_doing_it_wrong(
 			$class_and_method,
-			__( "${class_and_method}: The visibility of the custom orders table feature is now handled by the WooCommerce features engine. See the FeaturesController class, or go to WooCommerce - Settings - Advanced - Features.", 'woocommerce' ),
+			sprintf(
+				// translators: %1$s the name of the class and method used.
+				__( '%1$s: The visibility of the custom orders table feature is now handled by the WooCommerce features engine. See the FeaturesController class, or go to WooCommerce - Settings - Advanced - Features.', 'woocommerce' ),
+				$class_and_method
+			),
 			'7.0'
 		);
 	}
@@ -185,7 +189,11 @@ class CustomOrdersTableController {
 		$class_and_method = ( new \ReflectionClass( $this ) )->getShortName() . '::' . __FUNCTION__;
 		wc_doing_it_wrong(
 			$class_and_method,
-			__( "${class_and_method}: The visibility of the custom orders table feature is now handled by the WooCommerce features engine. See the FeaturesController class, or go to WooCommerce - Settings - Advanced - Features.", 'woocommerce' ),
+			sprintf(
+				// translators: %1$s the name of the class and method used.
+				__( '%1$s: The visibility of the custom orders table feature is now handled by the WooCommerce features engine. See the FeaturesController class, or go to WooCommerce - Settings - Advanced - Features.', 'woocommerce' ),
+				$class_and_method
+			),
 			'7.0'
 		);
 	}
