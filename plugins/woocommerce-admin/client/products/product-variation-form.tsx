@@ -3,8 +3,13 @@
  */
 import { __ } from '@wordpress/i18n';
 import { useEffect, useRef } from '@wordpress/element';
-import { Form, FormRef } from '@woocommerce/components';
+import {
+	Form,
+	FormRef,
+	__experimentalWooProductSectionItem as WooProductSectionItem,
+} from '@woocommerce/components';
 import { PartialProduct, ProductVariation } from '@woocommerce/data';
+import { PluginArea } from '@wordpress/plugins';
 
 /**
  * Internal dependencies
@@ -13,12 +18,13 @@ import PostsNavigation from './shared/posts-navigation';
 import { ProductFormLayout } from './layout/product-form-layout';
 import { ProductFormFooter } from './layout/product-form-footer';
 import { ProductFormTab } from './product-form-tab';
-import { PricingSection } from './sections/pricing-section';
 import { ProductInventorySection } from './sections/product-inventory-section';
 import { ProductShippingSection } from './sections/product-shipping-section';
 import { ProductVariationDetailsSection } from './sections/product-variation-details-section';
 import { ProductVariationFormHeader } from './layout/product-variation-form-header';
 import useProductVariationNavigation from './hooks/use-product-variation-navigation';
+import { TAB_PRICING_ID } from './fills/constants';
+
 import './product-variation-form.scss';
 
 export const ProductVariationForm: React.FC< {
@@ -55,7 +61,7 @@ export const ProductVariationForm: React.FC< {
 					<ProductVariationDetailsSection />
 				</ProductFormTab>
 				<ProductFormTab name="pricing" title="Pricing">
-					<PricingSection />
+					<WooProductSectionItem.Slot location={ TAB_PRICING_ID } />
 				</ProductFormTab>
 				<ProductFormTab name="inventory" title="Inventory">
 					<ProductInventorySection />
@@ -82,6 +88,8 @@ export const ProductVariationForm: React.FC< {
 					nextLabel={ __( 'Next product variation', 'woocommerce' ) }
 				/>
 			</div>
+			{ /* @ts-expect-error 'scope' does exist. @types/wordpress__plugins is outdated. */ }
+			<PluginArea scope="woocommerce-product-editor" />
 		</Form>
 	);
 };
