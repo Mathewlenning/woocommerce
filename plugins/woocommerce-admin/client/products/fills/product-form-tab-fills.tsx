@@ -13,7 +13,6 @@ import { useMemo } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import { ImagesSection } from '../sections/images-section';
 import { AttributesSection } from '../sections/attributes-section';
 import { PricingSection } from '../sections/pricing-section';
 import { ProductInventorySection } from '../sections/product-inventory-section';
@@ -63,7 +62,6 @@ const Tabs = () => {
 			>
 				<>
 					<WooProductSectionItem.Slot location={ TAB_GENERAL_ID } />
-					<ImagesSection />
 					<AttributesSection />
 				</>
 			</WooProductTabItem>
