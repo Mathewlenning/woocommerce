@@ -3,7 +3,8 @@
  */
 import { __ } from '@wordpress/i18n';
 import { useEffect, useRef } from '@wordpress/element';
-import { Form, FormRef } from '@woocommerce/components';
+import { Form, FormRef, SlotContextProvider } from '@woocommerce/components';
+import { PluginArea } from '@wordpress/plugins';
 import { PartialProduct, ProductVariation } from '@woocommerce/data';
 
 /**
@@ -44,44 +45,40 @@ export const ProductVariationForm: React.FC< {
 	}, [ productVariation ] );
 
 	return (
-		<Form< Partial< ProductVariation > >
-			initialValues={ productVariation }
-			errors={ {} }
-			ref={ formRef }
-		>
-			<ProductVariationFormHeader />
-			<ProductFormLayout key={ productVariation.id }>
-				<ProductFormTab name="general" title="General">
-					<ProductVariationDetailsSection />
-				</ProductFormTab>
-				<ProductFormTab name="pricing" title="Pricing">
-					<PricingSection />
-				</ProductFormTab>
-				<ProductFormTab name="inventory" title="Inventory">
-					<ProductInventorySection />
-				</ProductFormTab>
-				<ProductFormTab name="shipping" title="Shipping">
-					<ProductShippingSection
-						product={ productVariation as PartialProduct }
-					/>
-				</ProductFormTab>
-			</ProductFormLayout>
-			<ProductFormFooter />
-
-			<div className="product-variation-form__navigation">
-				<PostsNavigation
-					{ ...navigationProps }
-					actionLabel={ __(
-						'Return to main product',
-						'woocommerce'
-					) }
-					prevLabel={ __(
-						'Previous product variation',
-						'woocommerce'
-					) }
-					nextLabel={ __( 'Next product variation', 'woocommerce' ) }
+		<SlotContextProvider>
+			<Form< Partial< ProductVariation > >
+				initialValues={ productVariation }
+				errors={ {} }
+				ref={ formRef }
+			>
+				<ProductVariationFormHeader />
+				<ProductFormLayout
+					key={ productVariation.id }
+					id="variation"
+					product={ productVariation as PartialProduct }
 				/>
-			</div>
-		</Form>
+				<ProductFormFooter />
+
+				<div className="product-variation-form__navigation">
+					<PostsNavigation
+						{ ...navigationProps }
+						actionLabel={ __(
+							'Return to main product',
+							'woocommerce'
+						) }
+						prevLabel={ __(
+							'Previous product variation',
+							'woocommerce'
+						) }
+						nextLabel={ __(
+							'Next product variation',
+							'woocommerce'
+						) }
+					/>
+				</div>
+				{ /* @ts-expect-error 'scope' does exist. @types/wordpress__plugins is outdated. */ }
+				<PluginArea scope="woocommerce-product-editor" />
+			</Form>
+		</SlotContextProvider>
 	);
 };

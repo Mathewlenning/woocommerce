@@ -6,6 +6,7 @@ import { useEffect } from '@wordpress/element';
 import { TabPanel, Tooltip } from '@wordpress/components';
 import { navigateTo, getNewPath, getQuery } from '@woocommerce/navigation';
 import { __experimentalWooProductTabItem as WooProductTabItem } from '@woocommerce/components';
+import { PartialProduct } from '@woocommerce/data';
 import classnames from 'classnames';
 
 /**
@@ -13,7 +14,15 @@ import classnames from 'classnames';
  */
 import './product-form-layout.scss';
 
-export const ProductFormLayout: React.FC = () => {
+type ProductFormLayoutProps = {
+	id: string;
+	product?: PartialProduct;
+};
+
+export const ProductFormLayout: React.FC< ProductFormLayoutProps > = ( {
+	id,
+	product,
+} ) => {
 	const query = getQuery() as Record< string, string >;
 
 	useEffect( () => {
@@ -57,7 +66,7 @@ export const ProductFormLayout: React.FC = () => {
 
 	return (
 		<>
-			<WooProductTabItem.Slot location="tab/general">
+			<WooProductTabItem.Slot location={ 'tab/' + id }>
 				{ ( tabs, childrenMap ) =>
 					tabs.length > 0 ? (
 						<TabPanel
@@ -79,9 +88,12 @@ export const ProductFormLayout: React.FC = () => {
 									'woocommerce-product-form-tab',
 									'woocommerce-product-form-tab__' + tab.name
 								);
+								const child = childrenMap[ tab.name ];
 								return (
 									<div className={ classes } key={ tab.name }>
-										{ childrenMap[ tab.name ] }
+										{ typeof child === 'function'
+											? child( product )
+											: child }
 									</div>
 								);
 							} }
