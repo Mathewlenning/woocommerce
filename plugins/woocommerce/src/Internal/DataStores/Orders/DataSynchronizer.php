@@ -184,16 +184,7 @@ class DataSynchronizer implements BatchProcessorInterface {
 
 		$order_post_type_placeholder = implode( ', ', array_fill( 0, count( $order_post_types ), '%s' ) );
 
-		if ( $this->custom_orders_table_is_authoritative() ) {
-			$missing_orders_count_sql = "
-SELECT COUNT(1) FROM $wpdb->posts posts
-INNER JOIN $orders_table orders ON posts.id=orders.id
-WHERE posts.post_type = '" . self::PLACEHOLDER_ORDER_POST_TYPE . "'
- AND orders.status not in ( 'auto-draft' )
-";
-			$operator                 = '>';
-		} else {
-			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $order_post_type_placeholder is prepared.
+				// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $order_post_type_placeholder is prepared.
 			$missing_orders_count_sql = $wpdb->prepare(
 				"
 SELECT COUNT(1) FROM $wpdb->posts posts
@@ -204,9 +195,19 @@ WHERE
   AND orders.id IS NULL",
 				$order_post_types
 			);
+		
 			// phpcs:enable
 			$operator = '<';
-		}
+		
+		if ( $this->custom_orders_table_is_authoritative() ) {
+			$missing_orders_count_sql = "
+SELECT COUNT(1) FROM $wpdb->posts posts
+INNER JOIN $orders_table orders ON posts.id=orders.id
+WHERE posts.post_type = '" . self::PLACEHOLDER_ORDER_POST_TYPE . "'
+ AND orders.status not in ( 'auto-draft' )
+";
+			$operator                 = '>';
+		} 
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- $missing_orders_count_sql is prepared.
 		$sql = $wpdb->prepare(
@@ -329,21 +330,28 @@ WHERE
 	 * @param array $batch Batch details.
 	 */
 	public function process_batch( array $batch ) : void {
-		if ( $this->custom_orders_table_is_authoritative() ) {
-			foreach ( $batch as $id ) {
-				$order = wc_get_order( $id );
-				if ( ! $order ) {
-					$this->error_logger->error( "Order $id not found during batch process, skipping." );
-					continue;
-				}
-				$data_store = $order->get_data_store();
-				$data_store->backfill_post_record( $order );
-			}
-		} else {
-			$this->posts_to_cot_migrator->migrate_orders( $batch );
-		}
+		$this->process_batch_orders($batch);
+		
 		if ( 0 === $this->get_total_pending_count() ) {
 			$this->cleanup_synchronization_state();
+		}
+	}
+	
+	private function process_batch_orders(array $batch): void {
+		
+		if (!$this->custom_orders_table_is_authoritative()) {
+			return $this->posts_to_cot_migrator->migrate_orders( $batch );
+		}
+		
+		foreach ( $batch as $id ) {
+			$order = wc_get_order( $id );
+			if ( ! $order ) {
+				$this->error_logger->error( "Order $id not found during batch process, skipping." );
+				continue;
+			}
+			
+			$data_store = $order->get_data_store();
+			$data_store->backfill_post_record( $order );
 		}
 	}
 
@@ -364,11 +372,13 @@ WHERE
 	 * @return array Batch of records.
 	 */
 	public function get_next_batch_to_process( int $size ): array {
-		if ( $this->custom_orders_table_is_authoritative() ) {
-			$order_ids = $this->get_ids_of_orders_pending_sync( self::ID_TYPE_MISSING_IN_POSTS_TABLE, $size );
-		} else {
-			$order_ids = $this->get_ids_of_orders_pending_sync( self::ID_TYPE_MISSING_IN_ORDERS_TABLE, $size );
-		}
+		
+		$type = $this->custom_orders_table_is_authoritative() 
+			? self::ID_TYPE_MISSING_IN_POSTS_TABLE;
+			: self::ID_TYPE_MISSING_IN_ORDERS_TABLE;
+				
+		$order_ids = $this->get_ids_of_orders_pending_sync( $type, $size );
+		
 		if ( count( $order_ids ) >= $size ) {
 			return $order_ids;
 		}
@@ -472,27 +482,7 @@ WHERE
 			return $desc_tip;
 		}
 
-		if ( $this->custom_orders_table_is_authoritative() ) {
-			$extra_tip = sprintf(
-				_n(
-					"⚠ There's one order pending sync from the orders table to the posts table. The feature shouldn't be disabled until this order is synchronized.",
-					"⚠ There are %1\$d orders pending sync from the orders table to the posts table. The feature shouldn't be disabled until these orders are synchronized.",
-					$pending_sync_count,
-					'woocommerce'
-				),
-				$pending_sync_count
-			);
-		} else {
-			$extra_tip = sprintf(
-				_n(
-					"⚠ There's one order pending sync from the posts table to the orders table. The feature shouldn't be disabled until this order is synchronized.",
-					"⚠ There are %1\$d orders pending sync from the posts table to the orders table. The feature shouldn't be disabled until these orders are synchronized.",
-					$pending_sync_count,
-					'woocommerce'
-				),
-				$pending_sync_count
-			);
-		}
+		$extra_tip = get_extra_tip($pending_sync_count);
 
 		$cot_settings_url = add_query_arg(
 			array(
@@ -507,5 +497,29 @@ WHERE
 		$manage_cot_settings_link = sprintf( __( "<a href='%s'>Manage orders synchronization</a>", 'woocommerce' ), $cot_settings_url );
 
 		return $desc_tip ? "{$desc_tip}<br/>{$extra_tip} {$manage_cot_settings_link}" : "{$extra_tip} {$manage_cot_settings_link}";
+	}
+	
+	private function get_extra_tip(int $pending_sync_count): string {
+		if ( $this->custom_orders_table_is_authoritative() ) {
+			return sprintf(
+				_n(
+					"⚠ There's one order pending sync from the orders table to the posts table. The feature shouldn't be disabled until this order is synchronized.",
+					"⚠ There are %1\$d orders pending sync from the orders table to the posts table. The feature shouldn't be disabled until these orders are synchronized.",
+					$pending_sync_count,
+					'woocommerce'
+				),
+				$pending_sync_count
+			);
+		}
+		
+		return sprintf(
+			_n(
+				"⚠ There's one order pending sync from the posts table to the orders table. The feature shouldn't be disabled until this order is synchronized.",
+				"⚠ There are %1\$d orders pending sync from the posts table to the orders table. The feature shouldn't be disabled until these orders are synchronized.",
+				$pending_sync_count,
+				'woocommerce'
+			),
+			$pending_sync_count
+		);
 	}
 }
